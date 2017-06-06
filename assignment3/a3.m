@@ -136,20 +136,54 @@ function ret = loss(model, data, wd_coefficient)
 end
 
 function ret = d_loss_by_d_model(model, data, wd_coefficient)
-  % model.input_to_hid is a matrix of size <number of hidden units> by <number of inputs i.e. 256>
-  % model.hid_to_class is a matrix of size <number of classes i.e. 10> by <number of hidden units>
-  % data.inputs is a matrix of size <number of inputs i.e. 256> by <number of data cases>. Each column describes a different data case. 
-  % data.targets is a matrix of size <number of classes i.e. 10> by <number of data cases>. Each column describes a different data case. It contains a one-of-N encoding of the class, i.e. one element in every column is 1 and the others are 0.
+  % model.input_to_hid is a matrix of size <number of hidden units> 
+  %  by <number of inputs i.e. 256>
+  % model.hid_to_class is a matrix of size <number of classes i.e. 10> 
+     % by <number of hidden units>
+  % data.inputs is a matrix of size <number of inputs i.e. 256> 
+     % by <number of data cases>. Each column describes a different data case. 
+  % data.targets is a matrix of size <number of classes i.e. 10>
+     % by <number of data cases>. Each column describes a different data case. 
+     % It contains a one-of-N encoding of the class, i.e. one element 
+       % in every column is 1 and the others are 0.
 
-  % The returned object is supposed to be exactly like parameter <model>, i.e. it has fields ret.input_to_hid and ret.hid_to_class. However, the contents of those matrices are gradients (d loss by d model parameter), instead of model parameters.
+  % The returned object is supposed to be exactly like parameter <model>, 
+  % i.e. it has fields ret.input_to_hid and ret.hid_to_class. 
+  % However, the contents of those matrices are gradients 
+    % (d loss by d model parameter), instead of model parameters.
 	 
-  % This is the only function that you're expected to change. Right now, it just returns a lot of zeros, which is obviously not the correct output. Your job is to replace that by a correct computation.
+  % This is the only function that you're expected to change. 
+  % Right now, it just returns a lot of zeros, which is obviously 
+   % not the correct output. Your job is to replace that by a correct computation.
   ret.input_to_hid = model.input_to_hid * 0;
   ret.hid_to_class = model.hid_to_class * 0;
+  
+  hid_input = model.input_to_hid * data.inputs;
+  hid_output = logistic(hid_input);
+  class_input = model.hid_to_class * hid_output;
+  class_normalizer = log_sum_exp_over_rows(class_input);
+  log_class_prob = class_input - repmat(class_normalizer, [size(class_input, 1), 1]);
+  class_prob = exp(log_class_prob);
+  
+  d3 = class_prob-data.targets;
+  d2 = model.hid_to_class'*d3.*((hid_output).*(1-hid_output));
+  ret.input_to_hid = d2*data.inputs;
+  ret.hid_to_class = d3*hid_output';
+  disp(size(model.input_to_hid));
+  disp(size(data.inputs));
+  disp(size(d2));
+  disp(size(ret.input_to_hid));
+  disp(size(model.hid_to_class));
+  disp(size(data.targets));
+  disp(size(d3));
+  disp(size(ret.hid_to_class));
+  
+  
 end
 
 function ret = model_to_theta(model)
-  % This function takes a model (or gradient in model form), and turns it into one long vector. See also theta_to_model.
+  % This function takes a model (or gradient in model form), 
+   % and turns it into one long vector. See also theta_to_model.
   input_to_hid_transpose = transpose(model.input_to_hid);
   hid_to_class_transpose = transpose(model.hid_to_class);
   ret = [input_to_hid_transpose(:); hid_to_class_transpose(:)];
